@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
-
+#include <cstdlib>
+#include <ctime>
 #include <string>
 #include <mpi.h>
 
@@ -32,16 +33,6 @@ void gaussian_elimination(double *arr, double *part_arr, int n, int rank, int si
             }
         }
     }
-}
-int get_index_p(int g_line,int size){
-    return g_line/(size-1);
-}
-int get_thread_num(int g_line,int size){
-    int p_line=(g_line+1)%(size-1);
-    if (p_line==0){
-        p_line=size-1;
-    }
-    return p_line;
 }
 void printmtx(double *arr, int32_t n) {
     for (int i = 0; i < n; ++i) {
@@ -76,7 +67,7 @@ int main(int argc, char **argv) {
     int n;
     mtx >> n;
     int g_line=0;
-    int rank = 0, size = 0;
+    int rank = 0, size = 0, dest = 1;
     double start_time = 0, end_time = 0;
     MPI_Init(&argc, &argv);
     MPI_Comm comm = MPI_COMM_WORLD;
@@ -90,29 +81,26 @@ int main(int argc, char **argv) {
         for (int i = 0; i < n * n; ++i) {
             mtx >> arr[i];
         }
+        for (int i = 0; i < n; ++i) {
+            if (dest==size){
+                dest=1;
+            }
+            MPI_Send(arr+n*i,n,MPI_DOUBLE,dest,0,MPI_COMM_WORLD);
+            dest++;
+        }
 
         cout << "threads: "<< size << endl;
         cout << n << endl;
         printmtx(arr, n);
         cout << endl;
-//send
-        int thread_index=1;
-        while (g_line<n){
-            if (thread_index == size){
-                thread_index=1;
-            }
-            MPI_Send(&arr[g_line*n], n, MPI_DOUBLE, thread_index, get_index_p(g_line,size), comm);
-            thread_index++;
-            g_line++;
-        }
     }
-    if (rank){
-        for (int i = 0; i < n/(size-1); ++i) {
-            MPI_Recv(&part_arr[i*n],n,MPI_DOUBLE,0,i,comm,&status);
+    if (rank!=0){
+        for (int j = 0; j < n / (size-1); ++j) {
+            MPI_Recv(part_arr+n*j,n,MPI_DOUBLE,0,0,MPI_COMM_WORLD,&status);
         }
     }
     MPI_Barrier(comm);
-    if(rank == 3){
+    if(rank == 1){
         printpartmtx(part_arr, size-1, n);
         cout << endl;
     }
