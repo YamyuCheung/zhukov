@@ -1,7 +1,6 @@
 #include <iostream>
 #include <fstream>
-#include <cstdlib>
-#include <ctime>
+
 #include <string>
 #include <mpi.h>
 
@@ -97,7 +96,7 @@ int main(int argc, char **argv) {
         printmtx(arr, n);
         cout << endl;
 //send
-    int thread_index=1;
+        int thread_index=1;
         while (g_line<n){
             if (thread_index == size){
                 thread_index=1;
